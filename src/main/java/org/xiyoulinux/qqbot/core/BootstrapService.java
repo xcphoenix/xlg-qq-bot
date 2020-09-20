@@ -10,6 +10,8 @@ import org.xiyoulinux.qqbot.pojo.BootstrapContext;
  */
 public interface BootstrapService extends CommandLineRunner {
 
+    int FAILED_MAX_TIME = 3;
+
     /**
      * 初始化
      */
@@ -27,11 +29,14 @@ public interface BootstrapService extends CommandLineRunner {
      */
     @Override
     default void run(String... args) {
-        try {
-            startup();
-        } catch (Exception exception) {
-            throw new RuntimeException("bootstrap run error", exception);
-        }
+        int failedTimes = 0;
+        do {
+            try {
+                startup();
+            } catch (Exception exception) {
+                new RuntimeException("bootstrap run error, failed " + (++failedTimes) + "times", exception).printStackTrace();
+            }
+        } while (failedTimes > 0 && failedTimes < FAILED_MAX_TIME);
     }
 
     /**

@@ -20,6 +20,8 @@ public abstract class EventManager implements ApplicationContextAware {
 
     /**
      * 注册事件 {@link org.xiyoulinux.qqbot.handle.EventHandle}
+     *
+     * @param context 启动上下文
      */
     public abstract void registerEventHandle(BootstrapContext context);
 

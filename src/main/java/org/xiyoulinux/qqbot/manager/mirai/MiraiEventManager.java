@@ -83,7 +83,6 @@ public class MiraiEventManager extends EventManager {
                 return ListeningStatus.LISTENING;
             }
 
-            //处理在处理事件中发生的未捕获异常
             @Override
             public void handleException(CoroutineContext context, Throwable exception) {
                 throw new RuntimeException("在事件处理中发生异常", exception);
@@ -95,7 +94,6 @@ public class MiraiEventManager extends EventManager {
         if (type == null) {
             throw new IllegalArgumentException("invalid mirai event type");
         }
-
         if (type2Handle.containsKey(type)) {
             return type2Handle.get(type);
         }
@@ -121,9 +119,11 @@ public class MiraiEventManager extends EventManager {
         List<MiraiEventHandle<?>> eventHandles = new ArrayList<>();
         bean2Cls.forEach(e -> eventHandles.add(beanToHandles.get(e.getKey())));
 
-        log.info("scan event handles: {}", JSONObject.toJSONString(eventHandles.stream()
-                .map(MiraiEventHandle::name)
-                .collect(Collectors.toList()))
+        log.info("scan event handles: {}", JSONObject.toJSONString(
+                eventHandles.stream()
+                        .map(MiraiEventHandle::name)
+                        .collect(Collectors.toList())
+                )
         );
         type2Handle.put(type, eventHandles);
 
