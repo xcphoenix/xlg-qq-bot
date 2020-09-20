@@ -52,7 +52,7 @@ public class MiraiEventManager extends EventManager {
                 List<MiraiEventHandle<?>> handles = getEventHandles(MiraiEventType.GROUP);
                 for (MiraiEventHandle<? extends MessageEvent> handler : handles) {
                     try {
-                        EventHandleResult handleResult = ((GroupEventHandle)handler).handle(event);
+                        EventHandleResult handleResult = ((GroupEventHandle) handler).handle(event);
                         if (EventHandleResult.isInstantResult(handleResult)) {
                             return handleResult.getStatus();
                         }
@@ -70,7 +70,7 @@ public class MiraiEventManager extends EventManager {
                 List<MiraiEventHandle<?>> handles = getEventHandles(MiraiEventType.TEMP);
                 for (MiraiEventHandle<? extends MessageEvent> handler : handles) {
                     try {
-                        EventHandleResult handleResult = ((TempEventHandle)handler).handle(event);
+                        EventHandleResult handleResult = ((TempEventHandle) handler).handle(event);
                         if (EventHandleResult.isInstantResult(handleResult)) {
                             return handleResult.getStatus();
                         }
@@ -107,13 +107,14 @@ public class MiraiEventManager extends EventManager {
             return Collections.emptyList();
         }
 
-        @SuppressWarnings("rawtypes") List<AbstractMap.SimpleEntry<String, Class>> bean2Cls = beanToHandles
+        @SuppressWarnings("rawtypes")
+        List<AbstractMap.SimpleEntry<String, Class>> bean2Cls = beanToHandles
                 .entrySet()
                 .stream()
                 .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), (Class) (e.getValue().getClass())))
                 .sorted(Comparator.comparingInt(e -> Optional.ofNullable(e.getValue().getAnnotation(Priority.class))
                         .map(p -> ((Priority) p).level())
-                        .orElse(0))
+                        .orElse(Integer.MAX_VALUE))
                 )
                 .collect(Collectors.toList());
 

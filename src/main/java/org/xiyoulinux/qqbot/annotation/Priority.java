@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Indexed
 public @interface Priority {
     /**
-     * 优先级定义 >0有效 同等优先级按照bean字典序依次注入，优先级越高越先注入
+     * 优先级定义 值越高优先级越低
      */
-    int level() default 0;
+    int level() default Integer.MAX_VALUE;
 }
