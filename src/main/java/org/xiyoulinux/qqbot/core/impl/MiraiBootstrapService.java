@@ -13,6 +13,7 @@ import org.xiyoulinux.qqbot.pojo.mirai.MiraiConstant;
 import org.xiyoulinux.qqbot.props.ResCfgLoader;
 import org.xiyoulinux.qqbot.props.impl.PropertiesCfgLoader;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -47,6 +48,8 @@ public class MiraiBootstrapService implements BootstrapService {
                 resMap.getOrDefault(MiraiConstant.PASSWD_PROP, ""),
                 new BotConfiguration() {
                     {
+                        redirectBotLogToDirectory(new File("./logs/mirai/bot"));
+                        redirectNetworkLogToDirectory(new File("./logs/mirai/net"));
                         fileBasedDeviceInfo("deviceInfo.json");
                     }
                 });
