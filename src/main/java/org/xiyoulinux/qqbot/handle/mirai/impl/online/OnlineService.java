@@ -1,11 +1,18 @@
 package org.xiyoulinux.qqbot.handle.mirai.impl.online;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.Calendar;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -21,9 +28,12 @@ import static java.util.Calendar.MINUTE;
 @Component
 public class OnlineService {
 
-    private static final String ON_LINE_API = ";";
+    @Value("${sign.token}")
+    private String accessToken;
 
-    private final Pattern rulePattern = Pattern.compile("^小组.*[有|没有].*人");
+    private static final String ON_LINE_API = "https://sign.xiyoulinux.org/all/onUserNumber";
+
+    private final Pattern rulePattern = Pattern.compile("^小组.*(没)?有.*人");
 
     private final Calendar morningTime = Calendar.getInstance();
     private final Calendar nightTime = Calendar.getInstance();
@@ -36,7 +46,7 @@ public class OnlineService {
         morningTime.set(HOUR_OF_DAY, 7);
         morningTime.set(MINUTE, 0);
 
-        nightTime.set(HOUR_OF_DAY, 24);
+        nightTime.set(HOUR_OF_DAY, 23);
         nightTime.set(MINUTE, 0);
     }
 
@@ -67,19 +77,31 @@ public class OnlineService {
     }
 
     private Integer getOnlineNum() {
-        return 1;
-        // Request request = new Request.Builder().url(ON_LINE_API).build();
-        // try (Response response = httpClient.newCall(request).execute()) {
-        //     if (response.isSuccessful()) {
-        //         // TODO 解析
-        //         return 1;
-        //     } else {
-        //         log.warn("request online error, api: {}", ON_LINE_API);
-        //     }
-        // } catch (IOException e) {
-        //     log.error("request online exception, api: " + ON_LINE_API, e);
-        // }
-        // return null;
+        Request request = new Request.Builder().url(ON_LINE_API)
+                .addHeader("X-Token", accessToken)
+                .build();
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                String respJsonStr = Objects.requireNonNull(response.body()).string();
+                JSONObject respJson = JSON.parseObject(respJsonStr);
+                final String successFlag = "success";
+                if (respJson.getBoolean(successFlag)) {
+                     Integer num = respJson.getInteger("result");
+                     if (num != null) {
+                         return num;
+                     } else {
+                         log.warn("request online num is null, resp: {}", respJsonStr);
+                     }
+                } else {
+                    log.warn("request online num failed, resp: {}", respJsonStr);
+                }
+            } else {
+                log.warn("request online error, api: {}", ON_LINE_API);
+            }
+        } catch (IOException e) {
+            log.error("request online exception, api: " + ON_LINE_API, e);
+        }
+        return null;
     }
 
 }
