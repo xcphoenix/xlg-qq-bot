@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "mirai.qq",
+      "type": "java.lang.Long",
+      "description": "QQ号."
+    },
+    {
+      "name": "mirai.password",
+      "type": "java.lang.String",
+      "description": "QQ密码."
+    },
+    {
+      "name": "mirai.log.redirect",
+      "type": "java.lang.Boolean",
+      "description": "是否重定向Mirai日志，默认false."
+    },
+    {
+      "name": "sign.token",
+      "type": "java.lang.String",
+      "description": "签到系统授权token."
+    }
+  ]
+}

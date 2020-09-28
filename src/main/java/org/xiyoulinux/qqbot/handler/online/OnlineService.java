@@ -1,4 +1,4 @@
-package org.xiyoulinux.qqbot.handle.mirai.impl.online;
+package org.xiyoulinux.qqbot.handler.online;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -60,7 +61,7 @@ public class OnlineService {
         Integer num = getOnlineNum();
         String replyMsg;
         if (num == null) {
-            replyMsg = "服务出错啦";
+            replyMsg = "糟糕...( ꒪⌓꒪) 服务出错啦";
         } else if (num <= 0) {
             Calendar now = Calendar.getInstance();
             if (now.getTime().after(nightTime.getTime())) {
@@ -80,23 +81,21 @@ public class OnlineService {
         Request request = new Request.Builder().url(ON_LINE_API)
                 .addHeader("X-Token", accessToken)
                 .build();
+        final String successFlag = "success";
+        final String resultFlag = "result";
         try (Response response = httpClient.newCall(request).execute()) {
-            if (response.isSuccessful()) {
-                String respJsonStr = Objects.requireNonNull(response.body()).string();
-                JSONObject respJson = JSON.parseObject(respJsonStr);
-                final String successFlag = "success";
-                if (respJson.getBoolean(successFlag)) {
-                     Integer num = respJson.getInteger("result");
-                     if (num != null) {
-                         return num;
-                     } else {
-                         log.warn("request online num is null, resp: {}", respJsonStr);
-                     }
-                } else {
-                    log.warn("request online num failed, resp: {}", respJsonStr);
-                }
-            } else {
+            if (!response.isSuccessful()) {
                 log.warn("request online error, api: {}", ON_LINE_API);
+                return null;
+            }
+            String respJsonStr = Objects.requireNonNull(response.body()).string();
+            JSONObject respJson = JSON.parseObject(respJsonStr);
+            Integer num = Optional.ofNullable(respJson).filter(e -> e.getBoolean(successFlag))
+                    .map(e -> e.getInteger(resultFlag)).orElse(null);
+            if (num != null) {
+                 return num;
+            } else {
+                log.warn("request online num failed, resp: {}", respJsonStr);
             }
         } catch (IOException e) {
             log.error("request online exception, api: " + ON_LINE_API, e);

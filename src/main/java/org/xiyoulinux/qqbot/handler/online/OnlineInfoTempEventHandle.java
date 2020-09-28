@@ -1,4 +1,4 @@
-package org.xiyoulinux.qqbot.handle.mirai.impl.online;
+package org.xiyoulinux.qqbot.handler.online;
 
 import net.mamoe.mirai.message.TempMessageEvent;
 import org.springframework.stereotype.Component;
