@@ -2,6 +2,7 @@ package org.xiyoulinux.qqbot.manager.mirai;
 
 import com.alibaba.fastjson.JSONObject;
 import kotlin.coroutines.CoroutineContext;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.event.EventHandler;
@@ -12,10 +13,9 @@ import net.mamoe.mirai.message.GroupMessageEvent;
 import net.mamoe.mirai.message.MessageEvent;
 import net.mamoe.mirai.message.TempMessageEvent;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.xiyoulinux.qqbot.annotation.Priority;
-import org.xiyoulinux.qqbot.handle.mirai.GroupEventHandle;
-import org.xiyoulinux.qqbot.handle.mirai.MiraiEventHandle;
-import org.xiyoulinux.qqbot.handle.mirai.TempEventHandle;
+import org.xiyoulinux.qqbot.handle.mirai.message.MiraiMessageEventHandle;
 import org.xiyoulinux.qqbot.manager.EventManager;
 import org.xiyoulinux.qqbot.pojo.BootstrapContext;
 import org.xiyoulinux.qqbot.pojo.mirai.EventHandleResult;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MiraiEventManager extends EventManager {
 
-    private final Map<MiraiEventType, List<MiraiEventHandle<?>>> type2Handle = new HashMap<>();
+    private final Map<MiraiEventType, List<MiraiMessageEventHandle<? extends MessageEvent>>> type2Handle = new HashMap<>();
 
     @Override
     public void registerEventHandle(BootstrapContext context) {
@@ -45,42 +45,15 @@ public class MiraiEventManager extends EventManager {
         }
         Bot bot = (Bot) context.getArgs()[0];
 
-        // TODO 重构代码
         Events.registerEvents(bot, new SimpleListenerHost() {
             @EventHandler
             public ListeningStatus onGroupMessage(GroupMessageEvent event) {
-                List<MiraiEventHandle<?>> handles = getEventHandles(MiraiEventType.GROUP);
-                for (MiraiEventHandle<? extends MessageEvent> handler : handles) {
-                    try {
-                        EventHandleResult handleResult = ((GroupEventHandle) handler).handle(event);
-                        if (EventHandleResult.isInstantResult(handleResult)) {
-                            return handleResult.getStatus();
-                        }
-                    } catch (Exception exception) {
-                        log.error("event[{}] handle error, handle[{}]", MiraiEventType.GROUP.name(),
-                                handler.getClass().getSimpleName());
-                        log.error("", exception);
-                    }
-                }
-                return ListeningStatus.LISTENING;
+                return doHandle(MiraiEventType.MSG_GROUP, event);
             }
 
             @EventHandler
             public ListeningStatus onTempMessage(TempMessageEvent event) {
-                List<MiraiEventHandle<?>> handles = getEventHandles(MiraiEventType.TEMP);
-                for (MiraiEventHandle<? extends MessageEvent> handler : handles) {
-                    try {
-                        EventHandleResult handleResult = ((TempEventHandle) handler).handle(event);
-                        if (EventHandleResult.isInstantResult(handleResult)) {
-                            return handleResult.getStatus();
-                        }
-                    } catch (Exception exception) {
-                        log.error("event[{}] handle error, handle[{}]", MiraiEventType.GROUP.name(),
-                                handler.getClass().getSimpleName());
-                        log.error("", exception);
-                    }
-                }
-                return ListeningStatus.LISTENING;
+                return doHandle(MiraiEventType.MSG_TEMP, event);
             }
 
             @Override
@@ -90,15 +63,40 @@ public class MiraiEventManager extends EventManager {
         });
     }
 
-    private List<MiraiEventHandle<?>> getEventHandles(MiraiEventType type) {
+    private <T extends MessageEvent> ListeningStatus doHandle(@NonNull MiraiEventType type, @NonNull T event) {
+        List<MiraiMessageEventHandle<T>> handles = getEventHandles(type);
+        for (MiraiMessageEventHandle<T> handler : handles) {
+            try {
+                EventHandleResult handleResult = handler.handle(event);
+                if (EventHandleResult.isInstantResult(handleResult)) {
+                    return handleResult.getStatus();
+                }
+            } catch (Exception exception) {
+                log.error("event[{}] handle error, handle[{}]", type.name(), handler.name());
+                log.error("", exception);
+            }
+        }
+        return ListeningStatus.LISTENING;
+    }
+
+    private <T extends MessageEvent> List<MiraiMessageEventHandle<T>> getEventHandles(MiraiEventType type) {
+        final List<MiraiMessageEventHandle<T>> eventHandles = new ArrayList<>();
         if (type == null) {
             throw new IllegalArgumentException("invalid mirai event type");
         }
         if (type2Handle.containsKey(type)) {
-            return type2Handle.get(type);
+            List<MiraiMessageEventHandle<? extends MessageEvent>> handleList = type2Handle.get(type).stream()
+                    .filter(Objects::nonNull).collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(handleList)) {
+                handleList.forEach(e -> {
+                    //noinspection unchecked
+                    eventHandles.add((MiraiMessageEventHandle<T>) e);
+                });
+            }
+            return eventHandles;
         }
 
-        Map<String, ? extends MiraiEventHandle<? extends MessageEvent>> beanToHandles =
+        Map<String, ? extends MiraiMessageEventHandle<? extends MessageEvent>> beanToHandles =
                 applicationContext.getBeansOfType(type.getEventHandle());
         if (beanToHandles.isEmpty()) {
             type2Handle.put(type, Collections.emptyList());
@@ -116,16 +114,16 @@ public class MiraiEventManager extends EventManager {
                 )
                 .collect(Collectors.toList());
 
-        List<MiraiEventHandle<?>> eventHandles = new ArrayList<>();
-        bean2Cls.forEach(e -> eventHandles.add(beanToHandles.get(e.getKey())));
+        //noinspection unchecked
+        bean2Cls.forEach(e -> eventHandles.add((MiraiMessageEventHandle<T>) beanToHandles.get(e.getKey())));
 
         log.info("scan event handles: {}", JSONObject.toJSONString(
                 eventHandles.stream()
-                        .map(MiraiEventHandle::name)
+                        .map(MiraiMessageEventHandle::name)
                         .collect(Collectors.toList())
                 )
         );
-        type2Handle.put(type, eventHandles);
+        type2Handle.put(type, new ArrayList<>(eventHandles));
 
         return eventHandles;
     }

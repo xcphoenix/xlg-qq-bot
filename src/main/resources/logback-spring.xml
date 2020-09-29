@@ -26,7 +26,7 @@
 		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
 			<!--定义文件滚动时的文件名的格式-->
 			<fileNamePattern>
-				./logs/${app.name}.%d{yyyy-MM-dd, Asia/Shanghai}.%i.log.gz
+				./logs/${app.name}.%d{yyyy-MM-dd, Asia/Shanghai}.%i.log
 			</fileNamePattern>
 			<maxFileSize>100MB</maxFileSize>
 			<!--60天的时间周期，日志量最大20GB-->
@@ -43,7 +43,7 @@
 	</appender>
 	
 	<!--root是默认的logger 这里设定输出级别是debug-->
-	<root level="WARN">
+	<root level="INFO">
 		<!--定义了两个appender，日志会通过往这两个appender里面写-->
 		<appender-ref ref="stdout"/>
 		<appender-ref ref="file"/>

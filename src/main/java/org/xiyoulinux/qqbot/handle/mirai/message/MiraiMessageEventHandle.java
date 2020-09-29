@@ -1,4 +1,4 @@
-package org.xiyoulinux.qqbot.handle.mirai;
+package org.xiyoulinux.qqbot.handle.mirai.message;
 
 import com.alibaba.fastjson.JSONObject;
 import net.mamoe.mirai.message.MessageEvent;
@@ -12,18 +12,13 @@ import org.xiyoulinux.qqbot.pojo.mirai.EventHandleResult;
  * @version 1.0
  * @date 2020/9/17 下午5:58
  */
-public interface MiraiEventHandle<T extends MessageEvent> extends EventHandle {
-
-    /**
-     * handle
-     *
-     * @param event 事件
-     * @return 处理结果
-     */
-    EventHandleResult handle(T event);
+public interface MiraiMessageEventHandle<T extends MessageEvent> extends EventHandle<T, EventHandleResult> {
 
     /**
      * chain to string
+     *
+     * @param chain ..
+     * @return 消息内容
      */
     default @NotNull
     String chainString(MessageChain chain) {
@@ -35,6 +30,9 @@ public interface MiraiEventHandle<T extends MessageEvent> extends EventHandle {
 
     /**
      * event to string
+     *
+     * @param event 消息事件
+     * @return 消息内容
      */
     default @NotNull
     String chainString(MessageEvent event) {
@@ -45,15 +43,6 @@ public interface MiraiEventHandle<T extends MessageEvent> extends EventHandle {
                     .printStackTrace();
         }
         return "";
-    }
-
-    /**
-     * 名称
-     *
-     * @return 事件处理器名称
-     */
-    default String name() {
-        return this.getClass().getSimpleName();
     }
 
 }
