@@ -5,6 +5,7 @@ package org.xiyoulinux.qqbot.handle;
  * @version 1.0
  * @date 2020/9/18 上午11:28
  */
+@FunctionalInterface
 public interface EventHandle<T, R> {
 
     /**
