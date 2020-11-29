@@ -1,4 +1,4 @@
-package org.xiyoulinux.qqbot.pojo.mirai;
+package org.xiyoulinux.qqbot.handle.mirai;
 
 import lombok.Getter;
 import net.mamoe.mirai.message.MessageEvent;

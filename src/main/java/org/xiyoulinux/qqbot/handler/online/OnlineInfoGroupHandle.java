@@ -4,7 +4,7 @@ import net.mamoe.mirai.message.GroupMessageEvent;
 import net.mamoe.mirai.message.data.At;
 import org.springframework.stereotype.Component;
 import org.xiyoulinux.qqbot.handle.mirai.message.GroupMessageEventHandle;
-import org.xiyoulinux.qqbot.pojo.mirai.EventHandleResult;
+import org.xiyoulinux.qqbot.handle.mirai.EventHandleResult;
 
 /**
  * @author xuanc

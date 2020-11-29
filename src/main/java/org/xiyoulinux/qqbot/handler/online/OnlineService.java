@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -63,7 +64,7 @@ public class OnlineService {
         if (num == null) {
             replyMsg = "糟糕...( ꒪⌓꒪) 服务出错啦";
         } else if (num <= 0) {
-            Calendar now = Calendar.getInstance();
+            Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
             if (now.getTime().after(nightTime.getTime())) {
                 replyMsg = "已经很晚了~小组已经没有人了";
             } else if (now.getTime().before(morningTime.getTime())) {

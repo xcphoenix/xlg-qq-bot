@@ -1,5 +1,7 @@
 package org.xiyoulinux.qqbot.handle;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author xuanc
  * @version 1.0
@@ -21,6 +23,7 @@ public interface EventHandle<T, R> {
      *
      * @return 事件处理器名称
      */
+    @NotNull
     default String name() {
         return this.getClass().getSimpleName();
     }

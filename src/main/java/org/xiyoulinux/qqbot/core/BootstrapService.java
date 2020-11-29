@@ -1,26 +1,28 @@
 package org.xiyoulinux.qqbot.core;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.CommandLineRunner;
-import org.xiyoulinux.qqbot.pojo.BootstrapContext;
 
 /**
  * @author xuanc
  * @version 1.0
  * @date 2020/9/17 下午5:57
  */
-public interface BootstrapService extends CommandLineRunner {
+public abstract class BootstrapService implements CommandLineRunner {
 
-    int FAILED_MAX_TIME = 3;
+    protected final int FAILED_MAX_TIME = 3;
 
     /**
      * 初始化
      */
-    default void init() {}
+    protected void init() {}
+
+    protected void destroy(Throwable throwable) {}
 
     /**
      * 启动入口
      */
-    void startup();
+    protected abstract void startup();
 
     /**
      * 运行
@@ -28,23 +30,28 @@ public interface BootstrapService extends CommandLineRunner {
      * @param args 参数
      */
     @Override
-    default void run(String... args) {
+    public void run(String... args) {
         int failedTimes = 0;
         do {
             try {
+                init();
                 startup();
+                destroy(null);
             } catch (Exception exception) {
-                new RuntimeException("bootstrap run error, failed " + (++failedTimes) + "times", exception).printStackTrace();
+                new RuntimeException("bootstrap run error, failed " + (++failedTimes) + "times", exception)
+                        .printStackTrace();
+                destroy(exception);
             }
         } while (failedTimes > 0 && failedTimes < FAILED_MAX_TIME);
     }
 
     /**
-     * 构建上下文
+     * 获取上下文
      *
      * @return 启动上下文
      */
-    default BootstrapContext buildContext() {
+    @NotNull
+    public BootstrapContext getContext() {
         return new BootstrapContext(this);
     }
 
