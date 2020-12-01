@@ -2,9 +2,12 @@ package org.xiyoulinux.qqbot.framework.handle.mirai.message.enhance;
 
 import net.mamoe.mirai.message.GroupMessageEvent;
 import net.mamoe.mirai.message.data.At;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.xiyoulinux.qqbot.framework.handle.mirai.message.GroupMessageEventHandle;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -18,16 +21,23 @@ public abstract class BaseGroupMessageEventHandle
 
     @Nullable
     @Override
-    protected Function<GroupMessageEvent, Long> groupIdFunc() {
-        return groupMessageEvent -> groupMessageEvent.getGroup().getId();
+    protected Function<GroupMessageEvent, List<Long>> groupIdFunc() {
+        return groupMessageEvent -> Collections.singletonList(groupMessageEvent.getGroup().getId());
     }
 
     @Override
-    void sendMessage(GroupMessageEvent event, String message, boolean isAt) {
-        if (isAt) {
-            event.getGroup().sendMessage(new At(event.getSender()).plus(message));
-        } else {
+    void sendMessage(@NotNull GroupMessageEvent event, @NotNull ReplyContext replyContext) {
+        String message = replyContext.getMessage();
+        if (replyContext.getAction() == null) {
             event.getGroup().sendMessage(message);
+        }
+        //noinspection SwitchStatementWithTooFewBranches
+        switch (replyContext.getAction()) {
+            case AT:
+                event.getGroup().sendMessage(new At(event.getSender()).plus(message));
+                break;
+            default:
+                throw new UnsupportedOperationException("unsupported action");
         }
     }
 

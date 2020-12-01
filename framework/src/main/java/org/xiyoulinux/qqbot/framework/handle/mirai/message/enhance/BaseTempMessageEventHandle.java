@@ -1,7 +1,13 @@
 package org.xiyoulinux.qqbot.framework.handle.mirai.message.enhance;
 
 import net.mamoe.mirai.message.TempMessageEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.xiyoulinux.qqbot.framework.handle.mirai.message.TempMessageEventHandle;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
 
 /**
  * @author xuanc
@@ -11,9 +17,15 @@ import org.xiyoulinux.qqbot.framework.handle.mirai.message.TempMessageEventHandl
 public abstract class BaseTempMessageEventHandle extends BaseMiraiMessageEventHandle<TempMessageEvent>
         implements TempMessageEventHandle {
 
+    @Nullable
     @Override
-    void sendMessage(TempMessageEvent event, String message, boolean isAt) {
-        event.getSender().sendMessage(message);
+    Function<TempMessageEvent, List<Long>> groupIdFunc() {
+        return tempMessageEvent -> Collections.singletonList(tempMessageEvent.getGroup().getId());
+    }
+
+    @Override
+    void sendMessage(@NotNull TempMessageEvent event, @NotNull ReplyContext replyContext) {
+        event.getSender().sendMessage(replyContext.getMessage());
     }
 
 }

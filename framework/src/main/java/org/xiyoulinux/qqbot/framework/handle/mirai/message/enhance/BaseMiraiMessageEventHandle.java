@@ -2,16 +2,22 @@ package org.xiyoulinux.qqbot.framework.handle.mirai.message.enhance;
 
 import lombok.extern.slf4j.Slf4j;
 import net.mamoe.mirai.message.MessageEvent;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.xiyoulinux.qqbot.framework.handle.mirai.message.MiraiMessageEventHandle;
+import org.springframework.util.Assert;
 import org.xiyoulinux.qqbot.framework.handle.mirai.EventHandleResult;
+import org.xiyoulinux.qqbot.framework.handle.mirai.message.MiraiMessageEventHandle;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
 /**
+ * 进一步抽象，添加过滤机制，隐藏属于 Mirai 的操作，复杂操作需要实现
+ *  <li>{@link MiraiMessageEventHandle}</li>
+ *
  * @author xuanc
  * @version 1.0
  * @date 2020/11/26 下午4:41
@@ -20,10 +26,8 @@ import java.util.function.Function;
 public abstract class BaseMiraiMessageEventHandle<T extends MessageEvent>
         implements MiraiMessageEventHandle<T> {
 
-    private volatile boolean isVaild = true;
-
     /*
-     * 号码匹配 ------------------------------
+     * Group filter
      */
 
     protected Long[] allowGroups() {
@@ -34,6 +38,18 @@ public abstract class BaseMiraiMessageEventHandle<T extends MessageEvent>
         return new Long[0];
     }
 
+    /**
+     * 获取群组 id 的 Func
+     */
+    @Nullable
+    abstract Function<T, List<Long>> groupIdFunc();
+
+    protected final ListFilter<Long> groupFilter = ListFilter.of(null, null);
+
+    /*
+     * User filter
+     */
+
     protected Long[] allowUsers() {
         return new Long[0];
     }
@@ -43,27 +59,21 @@ public abstract class BaseMiraiMessageEventHandle<T extends MessageEvent>
     }
 
     /**
-     * 获取群组 id 的 Func，默认返回空
-     */
-    @Nullable
-    protected Function<T, Long> groupIdFunc() {
-        return null;
-    }
-
-    /**
      * 获取当前用户 QQ 号的 Func，默认返回发送者 QQ
      */
     @Nullable
-    protected Function<T, Long> userIdFunc() {
-        return t -> t.getSender().getId();
+    protected Function<T, List<Long>> userIdFunc() {
+        return t -> Collections.singletonList(t.getSender().getId());
     }
+
+    protected final ListFilter<Long> userFilter = ListFilter.of(null, null);
 
     /*
      * 自定义过滤 ------------------------------
      */
 
     @Nullable
-    protected Function<T, Boolean> customFilter() {
+    protected Filter<MessageContext> customFilter() {
         return null;
     }
 
@@ -71,58 +81,60 @@ public abstract class BaseMiraiMessageEventHandle<T extends MessageEvent>
      * 消息发送 ------------------------------
      */
 
-    abstract void sendMessage(T event, String message, boolean isAt);
+    abstract void sendMessage(@NotNull T event, @NotNull ReplyContext replyContext);
 
-    @Nullable
-    protected Function<String, Pair<String, Boolean>> messageReply() {
-        return null;
-    }
-
-    protected EventHandleResult messageHandle(T event) {
-        log.warn("handler not implement handle, do nothing, this handle while be ignored in the next time");
-        isVaild = false;
-        return EventHandleResult.DEFAULT_RESULT;
-    }
+    @NotNull
+    protected abstract Function<MessageContext, ReplyContext> messageReply();
 
     @Override
-    final public EventHandleResult handle(T event) {
-        if (!isVaild) {
-            return EventHandleResult.DEFAULT_RESULT;
-        }
+    public EventHandleResult handle(T event) {
+        Assert.notNull(event, "event cannot be null");
+        final EventHandleResult defaultResult = EventHandleResult.DEFAULT_RESULT;
+
+        MessageContext msgCtx = buildMsgCtx(event);
+
         // filter
-        if (Optional.ofNullable(customFilter()).map(filter -> filter.apply(event)).orElse(false)
-                || filter(event, groupIdFunc(), allowGroups(), blockGroups())
-                || filter(event, userIdFunc(), allowUsers(), blockUsers())
-        ) {
-            return EventHandleResult.DEFAULT_RESULT;
+        if (filter(event, groupIdFunc(), groupFilter, allowGroups(), blockGroups())
+                || filter(event, userIdFunc(), userFilter, allowUsers(), blockUsers())) {
+            return defaultResult;
+        }
+        if (Optional.ofNullable(customFilter()).map(filter -> filter.filter(msgCtx)).orElse(false)) {
+            return defaultResult;
         }
 
         // doHandle
-        Function<String, Pair<String, Boolean>> messageReplyFunc = messageReply();
-        if (messageReplyFunc != null) {
-            Pair<String, Boolean> res = messageReplyFunc.apply(chainString(event));
-            if (res == null) {
-                log.warn("message reply func return null");
-            } else {
-                sendMessage(event, res.getLeft(), res.getValue());
-            }
-            return EventHandleResult.DEFAULT_RESULT;
+        log.info("do handler handle...");
+        Function<MessageContext, ReplyContext> messageReplyFunc = messageReply();
+        ReplyContext res = messageReplyFunc.apply(msgCtx);
+        if (res == null || StringUtils.isBlank(res.getMessage())) {
+            log.warn("message reply func return null");
+            return defaultResult;
         }
+        sendMessage(event, res);
 
-        return messageHandle(event);
+        if (res.isProceed()) {
+            return defaultResult;
+        } else {
+            return new EventHandleResult().setInstantResult(true);
+        }
+    }
+
+    private MessageContext buildMsgCtx(T event) {
+        return new MessageContext(chainString(event));
     }
 
     /**
      * 过滤返回 true
      */
-    private <K> boolean filter(T event, Function<T, K> filter, final K[] allow, final K[] block) {
-        if (event == null || (ArrayUtils.isEmpty(allow) && ArrayUtils.isEmpty(block))) {
-            return false;
-        }
-        K thisValue = filter.apply(event);
-        boolean flag = !ArrayUtils.isNotEmpty(allow);
-        final K[] conditionArr = ArrayUtils.isNotEmpty(allow) ? allow : block;
-        return flag && ArrayUtils.contains(conditionArr, thisValue);
+    private <K> boolean filter(final T event,
+                               @Nullable Function<T, List<K>> valFunc,
+                               final ListFilter<K> listFilter,
+                               @Nullable K[] allowList,
+                               @Nullable K[] blockList) {
+        return Optional.ofNullable(valFunc)
+                .map(func -> func.apply(event))
+                .map(vales -> listFilter.setAllowList(allowList).setBlockList(blockList).filter(vales))
+                .orElse(false);
     }
 
 }

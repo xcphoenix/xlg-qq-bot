@@ -1,4 +1,4 @@
-package org.xiyoulinux.qqbot.framework.service.online;
+package org.xiyoulinux.qqbot.service.online;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,8 +14,6 @@ import java.util.Calendar;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
 
 import static java.util.Calendar.HOUR_OF_DAY;
 import static java.util.Calendar.MINUTE;
@@ -35,8 +32,6 @@ public class OnlineService {
 
     private static final String ON_LINE_API = "https://sign.xiyoulinux.org/all/onUserNumber";
 
-    private final Pattern rulePattern = Pattern.compile("^小组.*(没)?有.*人");
-
     private final Calendar morningTime = Calendar.getInstance();
     private final Calendar nightTime = Calendar.getInstance();
     private final OkHttpClient httpClient = new OkHttpClient().newBuilder()
@@ -52,13 +47,7 @@ public class OnlineService {
         nightTime.set(MINUTE, 0);
     }
 
-    public void onlineHandle(String msg, Consumer<String> action) {
-        if (StringUtils.isEmpty(msg)) {
-            return;
-        }
-        if (!rulePattern.matcher(msg).find()) {
-            return;
-        }
+    public String onlineHandle() {
         Integer num = getOnlineNum();
         String replyMsg;
         if (num == null) {
@@ -75,7 +64,7 @@ public class OnlineService {
         } else {
             replyMsg = "小组现在有" + num + "个人";
         }
-        action.accept(replyMsg);
+        return replyMsg;
     }
 
     private Integer getOnlineNum() {

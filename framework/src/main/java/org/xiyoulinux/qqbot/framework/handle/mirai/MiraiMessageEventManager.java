@@ -79,6 +79,7 @@ public class MiraiMessageEventManager extends EventManager {
         });
     }
 
+    @NotNull
     @Override
     public EventType getType() {
         return EventType.MESSAGE;
